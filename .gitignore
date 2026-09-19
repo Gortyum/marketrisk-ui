@@ -1,6 +1,11 @@
 # --- Dependencias ---
 node_modules/
 
+# --- Configuración local de Vite (.env, .env.production…); conserva el ejemplo ---
+.env
+.env.*
+!.env.example
+
 # --- Build (se genera con npm run build / start.ps1) ---
 dist/
 *.local
