@@ -1,0 +1,14 @@
+# --- Dependencias ---
+node_modules/
+
+# --- Build (se genera con npm run build / start.ps1) ---
+dist/
+*.local
+
+# --- Logs de npm ---
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# --- Cache de Vite / análisis ---
+.vite/
