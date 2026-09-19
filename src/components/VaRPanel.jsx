@@ -6,9 +6,14 @@ const px = (i, len) => P.l + (W - P.l - P.r) * i / (len - 1)
 const py = v => P.t + (H - P.t - P.b) * (1 - v / YMAX)
 const PERIODS = [['30', '30D'], ['90', '90D'], ['1Y', '1Y']]
 
-export default function VaRPanel({ period, setPeriod }) {
+export default function VaRPanel({ period, setPeriod, confidence = 95 }) {
   const s = SERIES[period]
   const len = s.len
+  const mainKey = 'var' + confidence
+  const subKey = confidence === 99 ? 'var95' : 'var99'
+  const subLabel = confidence === 99 ? 'VaR 95%' : 'VaR 99%'
+  const main = s[mainKey]
+  const sub = s[subKey]
   const [hover, setHover] = useState(null)
   const tipWRef = { current: 170 }
 
@@ -16,14 +21,14 @@ export default function VaRPanel({ period, setPeriod }) {
     const b = e.currentTarget.getBoundingClientRect()
     const mx = (e.clientX - b.left) / b.width * W
     const idx = Math.max(0, Math.min(len - 1, Math.round((mx - P.l) * (len - 1) / (W - P.l - P.r))))
-    setHover({ idx, gx: px(idx, len), gy: py(s.var95[idx]), cx: e.clientX, bTop: b.top, bH: b.height })
+    setHover({ idx, gx: px(idx, len), gy: py(main[idx]), cx: e.clientX, bTop: b.top, bH: b.height })
   }
 
   const yTicks = [0, 0.65, 1.3, 1.95, YMAX]
   const nTicks = period === '30' ? 5 : 6
   const xIdx = Array.from({ length: nTicks }, (_, i) => Math.round(i * (len - 1) / (nTicks - 1)))
   const pol = arr => arr.map((v, i) => px(i, len) + ',' + py(v)).join(' ')
-  const area = 'M' + s.var95.map((v, i) => px(i, len) + ' ' + py(v)).join(' L') + ` L${W - P.r} ${py(0)} L${P.l} ${py(0)} Z`
+  const area = 'M' + main.map((v, i) => px(i, len) + ' ' + py(v)).join(' L') + ` L${W - P.r} ${py(0)} L${P.l} ${py(0)} Z`
 
   let tipX = 0, tipY = 0
   if (hover) {
@@ -39,8 +44,8 @@ export default function VaRPanel({ period, setPeriod }) {
         <div className="panel__title">VaR History</div>
         <div className="panel__tools">
           <div className="legend" aria-hidden="true">
-            <span className="legend-item"><i style={{ background: 'var(--magenta)' }} />VaR 95%</span>
-            <span className="legend-item"><i style={{ background: 'var(--ink)' }} />VaR 99%</span>
+            <span className="legend-item"><i style={{ background: 'var(--magenta)' }} />VaR {confidence}%</span>
+            <span className="legend-item"><i style={{ background: 'var(--ink)' }} />{subLabel}</span>
             <span className="legend-item"><i className="da" />Expected Shortfall</span>
           </div>
           <div className="seg" role="group" aria-label="History period">
@@ -71,12 +76,12 @@ export default function VaRPanel({ period, setPeriod }) {
               </g>
             ))}
             <path className="area" d={area} />
-            <polyline className="plot-line" style={{ stroke: 'var(--ink)' }} points={pol(s.var99)} />
+            <polyline className="plot-line" style={{ stroke: 'var(--ink)' }} points={pol(sub)} />
             <polyline className="plot-line" style={{ stroke: 'var(--ink)', strokeDasharray: '5 3' }} points={pol(s.es)} />
-            <polyline className="plot-line" style={{ stroke: 'var(--magenta)' }} points={pol(s.var95)} />
-            <circle cx={px(len - 1, len)} cy={py(s.var95[len - 1])} r="3.5" fill="var(--halo)" stroke="var(--magenta)" strokeWidth="2" />
-            <text className="axis-label" x={px(len - 1, len) + 10} y={py(s.var95[len - 1]) + 3} style={{ fill: 'var(--magenta)', fontWeight: 600 }}>
-              {fmtM(s.var95[len - 1])}
+            <polyline className="plot-line" style={{ stroke: 'var(--magenta)' }} points={pol(main)} />
+            <circle cx={px(len - 1, len)} cy={py(main[len - 1])} r="3.5" fill="var(--halo)" stroke="var(--magenta)" strokeWidth="2" />
+            <text className="axis-label" x={px(len - 1, len) + 10} y={py(main[len - 1]) + 3} style={{ fill: 'var(--magenta)', fontWeight: 600 }}>
+              {fmtM(main[len - 1])}
             </text>
             {hover && (
               <>
@@ -89,9 +94,9 @@ export default function VaRPanel({ period, setPeriod }) {
             <div id="tip" role="tooltip" style={{ display: 'block', left: tipX + 'px', top: tipY + 'px' }}
               ref={node => { if (node) tipWRef.current = node.offsetWidth }}>
               <div className="tip-date">{dates[hover.idx + 252 - len].toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</div>
-              <div className="tip-row"><span>VaR 95%</span><b className="mag">{fmtUsd(s.var95[hover.idx] * 1e6)}</b></div>
-              <div className="tip-row"><span>VaR 99%</span><b>{fmtUsd(s.var99[hover.idx] * 1e6)}</b></div>
-              <div className="tip-row"><span>ES 97.5%</span><b>{fmtUsd(s.es[hover.idx] * 1e6)}</b></div>
+              <div className="tip-row"><span>VaR {confidence}%</span><b className="mag">{fmtUsd(main[hover.idx] * 1e6)}</b></div>
+              <div className="tip-row"><span>{subLabel}</span><b>{fmtUsd(sub[hover.idx] * 1e6)}</b></div>
+              <div className="tip-row"><span>ES {confidence}%</span><b>{fmtUsd(s.es[hover.idx] * 1e6)}</b></div>
             </div>
           )}
         </div>

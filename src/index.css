@@ -161,6 +161,34 @@ h1{font-size:clamp(20px,2.2vw,24px);font-weight:600;letter-spacing:-.015em;margi
 .chip--accent{color:var(--magenta);border-color:var(--magenta-tint-2);background:var(--magenta-tint)}
 .kpi-foot{font-size:11px;color:var(--muted-2);margin-top:7px}
 
+/* ---------- central risk engine ---------- */
+.engine{position:relative;overflow:hidden}
+.engine::before{content:"";position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--magenta),transparent 72%)}
+.engine__toggle{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink);padding:7px 12px;font:600 11px var(--mono);letter-spacing:.05em;white-space:nowrap;flex:0 0 auto}
+.engine__toggle:hover{border-color:var(--line-strong);color:var(--magenta)}
+.engine__controls{display:flex;flex-wrap:wrap;gap:22px;align-items:flex-end;padding:2px 18px 16px;border-bottom:1px solid var(--line)}
+.engine__group{display:flex;flex-direction:column;gap:7px}
+.engine__group-label{font-size:9.5px;font-weight:600;letter-spacing:.13em;text-transform:uppercase;color:var(--muted-2)}
+.engine__readouts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;padding:16px 18px 6px}
+.readout{border:1px solid var(--line);border-radius:6px;background:var(--bg);box-shadow:var(--shadow);padding:14px 16px 12px;position:relative;overflow:hidden}
+.readout::before{content:"";position:absolute;top:0;left:0;right:0;height:2px;background:transparent}
+.readout--accent::before{background:var(--magenta)}
+.readout--neg::before{background:var(--err)}
+.readout__label{font-size:10.5px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.readout__value{font:600 clamp(22px,2vw,30px) var(--mono);letter-spacing:-.02em;color:var(--ink);margin-top:8px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.readout--accent .readout__value{color:var(--magenta)}
+.readout--neg .readout__value{color:var(--err)}
+.readout__meta{margin-top:10px;display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.engine__calc{border-top:1px dashed var(--line-strong);margin:14px 18px 18px}
+.engine__calc-head{display:flex;align-items:center;gap:11px;padding:12px 0 10px;font-size:10.5px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink)}
+.engine__calc-head .bar{flex:1;height:1px;background:linear-gradient(90deg,var(--line-strong),transparent)}
+.engine__calc-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 28px;background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:12px 16px}
+.calc-row{display:flex;justify-content:space-between;gap:14px;padding:5.5px 0;font:500 11.5px var(--mono);border-bottom:1px dashed var(--line)}
+.calc-row:last-of-type{border-bottom:0}
+.calc-row span{color:var(--muted)}
+.calc-row b{font-weight:600;color:var(--ink);text-align:right;font-variant-numeric:tabular-nums}
+.engine__calc-foot{font:500 10.5px var(--mono);color:var(--muted-2);padding-top:10px;letter-spacing:.02em}
+
 /* ---------- segmented / legend ---------- */
 .panel__tools{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
 .seg{display:inline-flex;border:1px solid var(--line);border-radius:6px;overflow:hidden}
@@ -238,6 +266,62 @@ h1{font-size:clamp(20px,2.2vw,24px);font-weight:600;letter-spacing:-.015em;margi
 .diag-row b{font-weight:500;color:var(--ink);text-align:right}
 .diag-warn{background:var(--magenta-tint);border:1px solid var(--magenta-tint-2);color:var(--magenta-deep);border-radius:4px;padding:6px 9px;font:500 10.5px var(--mono);margin-top:8px}
 
+/* ---------- risk factor decomposition ---------- */
+.dec-row{display:grid;grid-template-columns:128px minmax(0,1fr) 88px;align-items:center;gap:12px;padding:9px 4px;border-bottom:1px solid var(--line);cursor:pointer;transition:background .15s}
+.dec-row:hover{background:var(--surface)}
+.dec-row.is-open{background:var(--surface)}
+.dec-row__lbl{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.dec-row__lbl b{font-size:12px;color:var(--ink);font-weight:600}
+.dec-row__sym{font-family:var(--mono)}
+.dec-row__chev{font-size:9px;color:var(--muted-2)}
+.dec-row.is-open .dec-row__chev{color:var(--magenta)}
+.dec-row__track{height:7px;background:var(--surface);border:1px solid var(--line);border-radius:4px;overflow:hidden}
+.dec-row__fill{height:100%;background:var(--ink);border-radius:3px;transition:width .4s ease}
+.dec-row--class .dec-row__fill{background:var(--magenta)}
+.dec-row__val{text-align:right}
+.dec-row__val b{font:600 12px var(--mono);display:block;color:var(--ink)}
+.dec-row__val span{font:500 10px var(--mono);color:var(--muted-2)}
+.dec-level{border:1px solid var(--line);border-radius:6px;background:var(--surface);padding:4px 10px 6px;margin-top:8px}
+.dec-level__head{font-size:9.5px;font-weight:600;letter-spacing:.11em;text-transform:uppercase;color:var(--muted-2);padding:7px 0 2px}
+.dec-detail{border:1px solid var(--line);border-radius:6px;background:var(--bg);box-shadow:var(--shadow);padding:12px 14px;margin-top:8px}
+.dec-detail__head{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.dec-detail__head b{font:600 14px var(--mono);color:var(--ink)}
+.dec-detail__grid{display:grid;grid-template-columns:1fr 1fr;gap:0 18px}
+.dec-detail .calc-row{padding:8px 0;border-bottom:1px dashed var(--line)}
+.dec-detail .calc-row b.mag{color:var(--magenta)}
+.dec-detail__foot{font:500 10px var(--mono);color:var(--muted-2);padding-top:10px;letter-spacing:.02em;border-top:1px solid var(--line);margin-top:10px}
+
+/* ---------- stress lab ---------- */
+.stresslab__controls{display:flex;flex-wrap:wrap;align-items:flex-end;gap:14px;padding:2px 18px 10px}
+.stresslab__presets{display:flex;flex-wrap:wrap;gap:8px}
+.preset-btn{padding:7px 13px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--muted);font:600 11px var(--sans);cursor:pointer;transition:all .15s}
+.preset-btn:hover{border-color:var(--line-strong);color:var(--ink)}
+.preset-btn[aria-pressed="true"]{background:var(--ink);color:var(--solid-fg);border-color:var(--ink)}
+.stresslab__run{margin-left:auto}
+.stresslab__run:hover{border-color:var(--magenta);color:var(--magenta)}
+.stresslab__custom{display:flex;flex-direction:column;gap:7px;width:100%}
+.stresslab__inputs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.custom-input{display:grid;grid-template-columns:1fr auto auto;align-items:center;gap:6px;border:1px solid var(--line);border-radius:6px;padding:6px 10px;background:var(--bg)}
+.custom-input span{font-size:11px;color:var(--muted)}
+.custom-input input{width:54px;border:0;background:transparent;font:600 12px var(--mono);color:var(--ink);text-align:right}
+.custom-input input:focus{outline:1px solid var(--magenta-tint-2);border-radius:3px}
+.custom-input em{font-style:normal;font:500 10.5px var(--mono);color:var(--muted-2)}
+.stresslab__meta{display:flex;gap:8px;flex-wrap:wrap;padding:0 18px 12px;border-bottom:1px dashed var(--line)}
+.stresslab__cards{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px;padding:18px 18px 6px}
+.stress-card{border:1px solid var(--line);border-radius:8px;background:var(--bg);box-shadow:var(--shadow);padding:15px 17px 13px;position:relative;overflow:hidden}
+.stress-card::before{content:"";position:absolute;top:0;left:0;right:0;height:2px}
+.stress-card--accent::before{background:var(--magenta)}
+.stress-card__head{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.stress-card__eyebrow{font-size:9.5px;font-weight:600;letter-spacing:.13em;text-transform:uppercase;color:var(--muted-2)}
+.stress-card__kp{margin-top:12px}
+.stress-card__row{display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:8px 0;border-top:1px dashed var(--line);font-size:12px}
+.stress-card__row span{color:var(--muted)}
+.stress-card__row b{font:600 15px var(--mono);color:var(--ink);font-variant-numeric:tabular-nums}
+.stress-card b.mag{color:var(--magenta)}
+.stresslab__shocks{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 18px 0}
+.stresslab__shock-list{display:flex;gap:8px;flex-wrap:wrap}
+.stresslab__shock-list .tag b{font-weight:600}
+
 /* ---------- table ---------- */
 .table-wrap{overflow-x:auto;padding:4px 4px 10px}
 .data-table{width:100%;border-collapse:collapse;font-size:12.5px;min-width:760px}
@@ -290,6 +374,10 @@ h1{font-size:clamp(20px,2.2vw,24px);font-weight:600;letter-spacing:-.015em;margi
   .nav-group{flex-direction:row;gap:4px;margin:0}
   .nav-item.is-active::before{display:none}
   .etl-sub{grid-template-columns:1fr}
+  .stresslab__cards{grid-template-columns:1fr}
+  .stresslab__inputs{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .stresslab__run{margin-left:0}
+  .dec-detail__grid{grid-template-columns:1fr}
   .etl-rail{grid-template-columns:1fr;gap:14px}
   .rail-line{display:none}
   .stage{flex-direction:row;justify-content:flex-start;gap:12px;text-align:left}
@@ -297,6 +385,8 @@ h1{font-size:clamp(20px,2.2vw,24px);font-weight:600;letter-spacing:-.015em;margi
   .stage .tm{display:flex;flex-direction:column;align-items:flex-start}
   .st-stage-chip{margin-top:0}
   .stage__name{margin-top:0}
+  .engine__readouts{grid-template-columns:1fr}
+  .engine__calc-grid{grid-template-columns:1fr;gap:0}
 }
 @media (max-width:560px){
   .row-kpis{grid-template-columns:1fr}
@@ -304,6 +394,7 @@ h1{font-size:clamp(20px,2.2vw,24px);font-weight:600;letter-spacing:-.015em;margi
   .header-right{width:100%}
   .clock{text-align:left}
   .last-run{align-items:flex-start}
+  .readout__value{white-space:normal}
 }
 @media (prefers-reduced-motion: reduce){
   *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}

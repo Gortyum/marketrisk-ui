@@ -1,8 +1,7 @@
 import { STAGE_DEMO } from '../lib/data.js'
 import QualityGates from './QualityGates.jsx'
-import StressPanel from './StressPanel.jsx'
 
-export default function PipelinePanel({ pipe, quality, stress }) {
+export default function PipelinePanel({ pipe, quality }) {
   const anyRun = pipe.rail.some(x => x === 0)
   const allDone = pipe.rail.every(x => x === 1)
   return (
@@ -41,7 +40,6 @@ export default function PipelinePanel({ pipe, quality, stress }) {
       </div>
       <div className="etl-sub">
         <QualityGates q={quality} />
-        <StressPanel items={stress} />
       </div>
     </article>
   )

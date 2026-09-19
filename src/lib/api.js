@@ -61,6 +61,33 @@ export async function fetchHealth() {
   return r.json()
 }
 
+/* motor central: VaR + ES de un segmento con trazabilidad (mismo contrato del backend). */
+export async function computeEngine(portfolioId, segment, confidence, horizon, log) {
+  return jpost('/risk/portfolios/' + portfolioId + '/var/engine', {
+    segment,
+    confidence_level: confidence / 100,
+    horizon_days: horizon,
+    method: 'historical'
+  }, log)
+}
+
+/* descomposición al VaR por factor/clase (Euler allocation). */
+export async function fetchDecomposition(portfolioId, confidence, horizon, log) {
+  return jget('/risk/portfolios/' + portfolioId + '/var/factors?confidence_level=' +
+    (confidence / 100) + '&horizon_days=' + horizon + '&lookback_days=252', log)
+}
+
+/* estrés de un escenario: baseline vs. estresado (valor, P&L y VaR). */
+export async function runStress(portfolioId, scenarioName, shocks, confidence, horizon, log) {
+  return jpost('/risk/portfolios/' + portfolioId + '/stress/report', {
+    scenario_name: scenarioName,
+    shocks,
+    confidence_level: confidence / 100,
+    horizon_days: horizon,
+    lookback_days: 252
+  }, log)
+}
+
 /* upload feed, keep/refresh "Market Risk Portfolio", compute VaR/es/sensitivities/stress.
    log(text, kind) is optional and receives every request as a console line. */
 export async function runLive(version, log) {

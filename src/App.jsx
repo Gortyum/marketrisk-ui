@@ -1,25 +1,18 @@
 import { useEffect, useRef, useState } from 'react'
 import Sidebar from './components/Sidebar.jsx'
 import Topbar from './components/Topbar.jsx'
-import KpiRow from './components/KpiRow.jsx'
+import VarCenter from './components/VarCenter.jsx'
 import VaRPanel from './components/VaRPanel.jsx'
-import FactorPanel from './components/FactorPanel.jsx'
+import RiskDecompositionPanel from './components/RiskDecompositionPanel.jsx'
+import StressLab from './components/StressLab.jsx'
 import PipelinePanel from './components/PipelinePanel.jsx'
 import ConsolePanel from './components/ConsolePanel.jsx'
 import PositionsPanel from './components/PositionsPanel.jsx'
 import Footer from './components/Footer.jsx'
 import Toasts from './components/Toasts.jsx'
 import { useClock, useTheme } from './lib/hooks.js'
-import { CONTRIB_DEMO, POS_DEMO, STAGE_DEMO, DUR, fmtM, fmtUsd, sleep, nowTime } from './lib/data.js'
-import { API, fetchHealth, runLive, buildLiveView } from './lib/api.js'
-
-const STRESS_DEMO = [
-  { id: 'sc1', label: 'Equity crash −20%', val: '−$7.4M', neg: true },
-  { id: 'sc2', label: 'Equity rally +15%', val: '+$5.6M', neg: false },
-  { id: 'sc3', label: 'FX devaluation −10%', val: '−$4.9M', neg: true },
-  { id: 'sc4', label: 'Vol spike −25%', val: '−$6.1M', neg: true }
-]
-const STRESS_LABELS = { equity_crash: 'Equity crash −20%', equity_rally: 'Equity rally +15%', fx_devaluation: 'FX devaluation −10%', vol_spike: 'Vol spike −25%' }
+import { POS_DEMO, STAGE_DEMO, DUR, fmtM, fmtUsd, sleep, nowTime, calcEngineDemo, calcDecompositionDemo, calcStressDemo, classOf, EMPTY_CUSTOM, STRESS_PRESETS, SEGMENTS } from './lib/data.js'
+import { API, fetchHealth, runLive, buildLiveView, computeEngine, fetchDecomposition, runStress } from './lib/api.js'
 
 export default function App() {
   const { date, time } = useClock()
@@ -29,14 +22,19 @@ export default function App() {
   const [navActive, setNavActive] = useState('top')
   const [lastRun, setLastRun] = useState('not run this session')
   const [busy, setBusy] = useState(false)
-  const [kpi, setKpi] = useState({ var: '$1.82', es: '$2.41', exp: '$48.7', fact: '42', varMethod: 'historical', factChip: 'active factors' })
-  const [contrib, setContrib] = useState(CONTRIB_DEMO)
-  const [contribNote, setContribNote] = useState('ΔVaR contribution · sum = 100%')
+  const [segment, setSegment] = useState('all')
+  const [confidence, setConfidence] = useState(95)
+  const [horizon, setHorizon] = useState(1)
+  const [engine, setEngine] = useState(() => calcEngineDemo('all', 95, 1))
+  const [liveTick, setLiveTick] = useState(0)
+  const [dec, setDec] = useState(() => calcDecompositionDemo(95, 1))
+  const [stressRes, setStressRes] = useState(null)
+  const [presetId, setPresetId] = useState('usdclp')
+  const [customShocks, setCustomShocks] = useState(EMPTY_CUSTOM)
   const [positions, setPositions] = useState(POS_DEMO)
-  const [posSub, setPosSub] = useState('6 instruments · gross exposure $48.7M · risk-weighted profile below')
-  const [posCount, setPosCount] = useState('6 positions')
+  const [posSub, setPosSub] = useState('7 instruments · gross exposure $54.6M · risk-weighted profile below')
+  const [posCount, setPosCount] = useState('7 positions')
   const [netVar, setNetVar] = useState(1.82)
-  const [stress, setStress] = useState(STRESS_DEMO)
   const [quality, setQuality] = useState({ records: '2,418,392', valid: '99.97%', missing: '0.03%', dupes: '12', lat: '1.8s', fill: '99.97%' })
   const [pipe, setPipe] = useState({
     rail: [1, 1, 1, 1, 1],
@@ -77,22 +75,12 @@ export default function App() {
     const ver = healthRef.current ? (healthRef.current.version || '1.0.0') : '1.0.0'
     const res = await runLive(ver, (t, k) => pushLog(t, k))
     infoRef.current.live = true
-    const { contrib: c, positions: p, mv } = buildLiveView(res)
-    setKpi({
-      var: '$' + fmtM(res.var95.var_value / 1e6),
-      es: '$' + fmtM(res.var95.expected_shortfall / 1e6),
-      exp: '$' + fmtM(mv / 1e6),
-      fact: String(res.insts.length),
-      varMethod: 'computed live',
-      factChip: res.insts.length ? 'live factors' : 'active factors'
-    })
-    setContrib(c)
-    setContribNote('ΔVaR contribution · from live sensitivities')
+    infoRef.current.portfolioId = res.portfolioId
+    setLiveTick(t => t + 1)
+    const { positions: p, mv } = buildLiveView(res)
     setPositions(p)
     setNetVar(res.var95.var_value / 1e6)
     setPosSub(p.length + ' instruments · gross ' + fmtUsd(mv) + ' · computed from live positions')
-    const sc = Object.fromEntries((res.stress || []).map(s => [s.scenario_name, s.impact]))
-    setStress(STRESS_DEMO.map(d => ({ ...d, val: sc[d.id] === undefined ? d.val : fmtUsd(sc[d.id]), neg: sc[d.id] === undefined ? d.neg : sc[d.id] < 0 })))
     setQuality(q => ({ ...q, records: res.etl.price_rows_loaded.toLocaleString('en-US'), lat: res.latency + 's' }))
     setPipe({
       rail: [1, 1, 1, 1, 1],
@@ -188,18 +176,95 @@ addToast('Pipeline complete — ' + res.etl.price_rows_loaded.toLocaleString('en
     return () => { cancelled = true; clearInterval(i) }
   }, [])
 
+  /* ------------------------------------------------------------ central engine */
+  useEffect(() => {
+    let on = true
+    const pid = infoRef.current.portfolioId
+    if (infoRef.current.live && pid) {
+      computeEngine(pid, segment, confidence, horizon, pushLog)
+        .then(res => {
+          if (!on) return
+          const label = SEGMENTS.find(s => s.id === res.segment)?.label || res.segment
+          setEngine({ ...res, segmentLabel: label })
+        })
+        .catch(() => { if (on) setEngine(calcEngineDemo(segment, confidence, horizon)) })
+    } else {
+      setEngine(calcEngineDemo(segment, confidence, horizon))
+    }
+    return () => { on = false }
+  }, [segment, confidence, horizon, liveTick])
+
+  /* ------------------------------------------------------------ decomposición */
+  const canonDec = raw => ({
+    ...raw,
+    classes: (raw.classes || []).map(c => ({ ...c, asset_class: classOf(c.asset_class) })),
+    factors: (raw.factors || []).map(f => ({ ...f, asset_class: classOf(f.asset_class) }))
+  })
+
+  useEffect(() => {
+    let on = true
+    const pid = infoRef.current.portfolioId
+    if (infoRef.current.live && pid) {
+      fetchDecomposition(pid, confidence, horizon, pushLog)
+        .then(res => { if (on) setDec(canonDec(res)) })
+        .catch(() => { if (on) setDec(calcDecompositionDemo(confidence, horizon)) })
+    } else {
+      setDec(calcDecompositionDemo(confidence, horizon))
+    }
+    return () => { on = false }
+  }, [confidence, horizon, liveTick])
+
+  /* ------------------------------------------------------------ estrés */
+  const runScenario = async scenarioId => {
+    const preset = STRESS_PRESETS.find(p => p.id === scenarioId)
+    const name = preset ? preset.label : 'Custom Scenario'
+    const cls = scenarioId === 'custom' ? customShocks : (preset ? preset.cls : {})
+
+    const pid = infoRef.current.portfolioId
+    if (infoRef.current.live && pid && dec && dec.factors) {
+      const shocks = {}
+      for (const f of dec.factors) {
+        const c = classOf(f.asset_class)
+        if (cls[c] !== undefined) shocks[f.symbol] = cls[c]
+      }
+      try {
+        const res = await runStress(pid, name, shocks, confidence, horizon, pushLog)
+        setStressRes({ ...res, el: { label: name, cls, live: true } })
+        return
+      } catch (e) {
+        pushLog('stress report errored — falling back to demo · ' + e.message, 'err')
+      }
+    }
+    const res = calcStressDemo(name, cls, confidence, horizon)
+    setStressRes({ ...res, el: { label: name, cls, live: false } })
+  }
+
   return (
     <div className="app">
       <Sidebar navActive={navActive} setNavActive={setNavActive} navEtl={navEtl} envApi={status.api} envSchema={envSchema} footVer={footVer} />
       <main className="main">
         <Topbar date={date} time={time} lastRun={lastRun} statusChip={status.chip} statusText={status.text} busy={busy} onRun={runPipeline} toggle={toggle} />
         <div className="stack">
-          <KpiRow kpi={kpi} />
+          <VarCenter
+            engine={engine}
+            live={status.chip.includes('live')}
+            segment={segment} setSegment={setSegment}
+            confidence={confidence} setConfidence={setConfidence}
+            horizon={horizon} setHorizon={setHorizon}
+          />
           <section className="grid-va">
-            <VaRPanel period={period} setPeriod={setPeriod} />
-            <FactorPanel contrib={contrib} note={contribNote} />
+            <VaRPanel period={period} setPeriod={setPeriod} confidence={confidence} />
+            <RiskDecompositionPanel dec={dec} live={status.chip.includes('live')} />
           </section>
-          <PipelinePanel pipe={pipe} quality={quality} stress={stress} />
+          <StressLab
+            live={status.chip.includes('live')}
+            stressRes={stressRes}
+            presetId={presetId} setPresetId={setPresetId}
+            custom={customShocks} setCustom={setCustomShocks}
+            onRun={runScenario}
+            confidence={confidence} horizon={horizon}
+          />
+          <PipelinePanel pipe={pipe} quality={quality} />
           <ConsolePanel logs={logs} onClear={clearLogs} />
           <PositionsPanel positions={positions} posSub={posSub} posCount={posCount} netVar={netVar} />
           <Footer footVer={footVer} />
