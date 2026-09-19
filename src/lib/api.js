@@ -1,6 +1,8 @@
 import { mulberry32, dates, FACT, fmtUsd } from './data.js'
 
-export const API = import.meta.env.VITE_API_BASE || ''
+let api = (import.meta.env.VITE_API_BASE || '').trim()
+if (api && !/^https?:\/\//i.test(api)) api = 'https://' + api
+export const API = api.replace(/\/+$/, '')
 
 const req = async (u, opts = {}, log) => {
   const t0 = performance.now()
