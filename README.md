@@ -5,6 +5,13 @@ sensibilidades, pipeline ETL y stress testing) construido con **React + Vite**.
 Consume la API FastAPI del backend (hermano en `../backend/`), que en
 producción sirve también este build.
 
+## Capturas
+
+Tema claro · tema oscuro
+
+![Market Risk Dashboard — claro](screenshots/overview-light.png)
+![Market Risk Dashboard — oscuro](screenshots/overview-dark.png)
+
 ## Stack
 
 - **React 19** + **Vite 8** (`@vitejs/plugin-react`), JavaScript (ESM, JSX).
